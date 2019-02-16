@@ -12,24 +12,24 @@ class Alien(Sprite):
 
         # Load the alien image and set its rect attribute.
         if row == 4:
-            self.image = sprite_sheet.get_sprite(120, 0, 31, 31)
-            self.image_b = sprite_sheet.get_sprite(152, 0, 31, 31)
+            self.image = sprite_sheet.get_sprite(162, 0, 31, 31)
+            self.image_b = sprite_sheet.get_sprite(194, 0, 31, 31)
             self.points = 40
         elif row == 3:
-            self.image = sprite_sheet.get_sprite(44, 32, 43, 31)
-            self.image_b = sprite_sheet.get_sprite(88, 32, 43, 31)
+            self.image = sprite_sheet.get_sprite(0, 84, 43, 31)
+            self.image_b = sprite_sheet.get_sprite(44, 84, 43, 31)
             self.points = 20
         elif row == 2:
-            self.image = sprite_sheet.get_sprite(88, 32, 43, 31)
-            self.image_b = sprite_sheet.get_sprite(44, 32, 43, 31)
+            self.image = sprite_sheet.get_sprite(44, 84, 43, 31)
+            self.image_b = sprite_sheet.get_sprite(0, 84, 43, 31)
             self.points = 20
         elif row == 1:
-            self.image = sprite_sheet.get_sprite(180, 32, 46, 31)
-            self.image_b = sprite_sheet.get_sprite(133, 32, 46, 31)
+            self.image = sprite_sheet.get_sprite(88, 84, 46, 31)
+            self.image_b = sprite_sheet.get_sprite(136, 84, 46, 31)
             self.points = 10
         else:
-            self.image = sprite_sheet.get_sprite(133, 32, 46, 31)
-            self.image_b = sprite_sheet.get_sprite(180, 32, 46, 31)
+            self.image = sprite_sheet.get_sprite(136, 84, 46, 31)
+            self.image_b = sprite_sheet.get_sprite(88, 84, 46, 31)
             self.points = 10
 
         self.rect = self.image.get_rect()
@@ -59,4 +59,5 @@ class Alien(Sprite):
         self.rect.x = self.x
 
     def switch_image(self):
+        """Switch the image for animations."""
         self.image, self.image_b = self.image_b, self.image

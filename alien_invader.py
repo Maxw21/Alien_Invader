@@ -14,15 +14,18 @@ from game_manager import GameManager
 def run_game():
     # Initialize pygame, settings, and screen object.
     pygame.init()
+    clock = pygame.time.Clock()
+    clock.tick(60)
     ai_settings = Settings()
     screen = pygame.display.set_mode((ai_settings.screen_width, ai_settings.screen_height))
-    pygame.display.set_caption("Alien Invasion")
+    pygame.display.set_caption("Alien Invader")
 
     # Import sprite sheet
     sprite_sheet = SpriteSheet(file_name='images/spritesheet.png')
 
     # Make the Play button.
-    play_button = Button(screen=screen, msg="Play")
+    play_button = Button(screen=screen, msg="Play", order=0)
+    score_button = Button(screen=screen, msg="High Scores", order=1)
 
     # Create an instance to store game statistics and create a scoreboard.
     stats = GameStats(ai_settings=ai_settings)
@@ -30,15 +33,18 @@ def run_game():
 
     # Make a ship, a group of bullets, a group of aliens, and a group of ufos.
     ship = Ship(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet)
+    barriers = []
     bullets = Group()
+    alien_bullets = Group()
     aliens = Group()
     ufos = Group()
 
     # Create the fleet of aliens.
     game_manager = GameManager(ai_settings=ai_settings, screen=screen,
                                sprite_sheet=sprite_sheet, play_button=play_button,
-                               stats=stats, sb=sb, ship=ship, bullets=bullets,
-                               aliens=aliens, ufos=ufos)
+                               score_button=score_button, stats=stats, sb=sb, ship=ship,
+                               bullets=bullets, aliens=aliens, ufos=ufos, barriers=barriers,
+                               alien_bullets=alien_bullets)
 
     game_manager.create_fleet()
 
@@ -50,6 +56,7 @@ def run_game():
             ship.update()
             game_manager.update_bullets()
             game_manager.update_aliens()
+            game_manager.update_ufos()
 
         game_manager.update_screen()
 

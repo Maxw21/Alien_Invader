@@ -1,27 +1,38 @@
 import sys
 from time import sleep
+import random
 
 import pygame
 
+from barrier import Barrier
 from bullet import Bullet
 from alien import Alien
+from alien_bullet import AlienBullet
+from ufo import Ufo
 
 
 class GameManager:
     """Manages all game objects and interactions between them."""
     # Initialize Game Manager with all game objects.
-    def __init__(self, ai_settings, screen, sprite_sheet, play_button, stats, sb, ship, bullets, aliens, ufos):
+    def __init__(self, ai_settings, screen, sprite_sheet, play_button, score_button,
+                 stats, sb, ship, bullets, aliens, ufos, barriers, alien_bullets):
         self.ai_settings = ai_settings
         self.screen = screen
         self.sprite_sheet = sprite_sheet
         self.play_button = play_button
+        self.score_button = score_button
         self.stats = stats
         self.sb = sb
         self.ship = ship
         self.bullets = bullets
         self.aliens = aliens
         self.ufos = ufos
+        self.barriers = barriers
+        self.alien_bullets = alien_bullets
+        self.spawn_ufo = 0
         self.animate_aliens = 0
+        self.alien_bullet_time = 0
+        self.displaying_scores = False
 
     def check_events(self):
         """Respond to key presses and mouse events."""
@@ -35,6 +46,7 @@ class GameManager:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 self.check_play_button(mouse_x=mouse_x, mouse_y=mouse_y)
+                self.check_score_button(mouse_x=mouse_x, mouse_y=mouse_y)
 
     def check_key_down_events(self, event):
         """Respond to key presses."""
@@ -60,6 +72,9 @@ class GameManager:
             # Reset the game settings.
             self.ai_settings.initialize_dynamic_settings()
 
+            # Turn off high score menu
+            self.displaying_scores = False
+
             # Hide the mouse cursor.
             pygame.mouse.set_visible(False)
 
@@ -79,7 +94,15 @@ class GameManager:
 
             # Create a new fleet and center the ship.
             self.create_fleet()
+            self.create_barriers()
             self.ship.center_ship()
+
+    def check_score_button(self, mouse_x, mouse_y):
+        """Display high scores."""
+        button_clicked = self.score_button.rect.collidepoint(mouse_x, mouse_y)
+        if button_clicked and not self.stats.game_active:
+            # Clear the screen, display high scores
+            self.displaying_scores = not self.displaying_scores
 
     def fire_bullet(self):
         """Fire a bullet if limit not reached yet."""
@@ -96,13 +119,19 @@ class GameManager:
         """Update position of bullets and get rid of old bullets."""
         # Update bullet positions.
         self.bullets.update()
+        self.alien_bullets.update()
 
         # Get rid of bullets that have disappeared.
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
+        for bullet in self.alien_bullets.copy():
+            if bullet.rect.top >= self.screen.get_rect().bottom:
+                self.alien_bullets.remove(bullet)
 
         self.check_bullet_alien_collisions()
+        self.check_bullet_ship_collisions()
+        self.check_bullet_barrier_collisions()
 
     def check_bullet_alien_collisions(self):
         """Respond to bullet-alien collisions."""
@@ -112,13 +141,32 @@ class GameManager:
         if collisions or ufo_collisions:
             for aliens in collisions.values():
                 for alien in aliens:
-                    explosion_image = self.sprite_sheet.get_sprite(200, 102, 54, 50)
-                    self.screen.blit(explosion_image, alien.rect)
+
+
+
+                    # print(alien.rect)
+                    explosion_image = self.sprite_sheet.get_sprite(165, 122, 54, 50)
+                    explosion_image_rect = explosion_image.get_rect()
+                    explosion_image_rect.x = alien.rect.x
+                    explosion_image_rect.y = alien.rect.y
+                    # print(explosion_image_rect)
+                    self.screen.blit(explosion_image, explosion_image_rect)
                     self.stats.score += (alien.points * self.ai_settings.score_scale)
+
 
                 self.sb.prep_score()
             for ufos in ufo_collisions.values():
-                self.stats.score += self.stats.ufo_points
+                for ufo in ufos:
+                    ufo_points = random.randint(10, 100)
+                    points_str = "{:,}".format(ufo_points)
+                    text_color = (230, 230, 230)
+                    font = pygame.font.SysFont(None, 30)
+                    points_img = font.render(points_str, True, text_color, self.ai_settings.bg_color)
+                    points_img_rect = points_img.get_rect()
+                    points_img_rect.x = ufo.rect.x
+                    points_img_rect.y = ufo.rect.y
+                    self.screen.blit(points_img, points_img_rect)
+                self.stats.score += ufo_points
                 self.sb.prep_score()
             self.check_high_score()
 
@@ -132,6 +180,19 @@ class GameManager:
             self.sb.prep_level()
 
             self.create_fleet()
+            self.create_barriers()
+
+    def check_bullet_ship_collisions(self):
+        """Respond to bullet-ship collisions."""
+        collisions = pygame.sprite.spritecollide(self.ship,self.alien_bullets, True)
+        if collisions:
+            self.ship_hit()
+
+    def check_bullet_barrier_collisions(self):
+        """Respond to bullet-barrier collisions."""
+        for barrier in self.barriers:
+            pygame.sprite.groupcollide(self.bullets, barrier.barrier, True, True)
+            pygame.sprite.groupcollide(self.alien_bullets, barrier.barrier, True, True)
 
     def ship_hit(self):
         """Respond to ship being hit by alien."""
@@ -146,34 +207,101 @@ class GameManager:
             self.aliens.empty()
             self.bullets.empty()
 
+            # Play ship destroy animation
+            self.ship.destroy_animation()
+
             # Create a new fleet and center the ship.
             self.create_fleet()
             self.ship.center_ship()
 
             # Pause
-            sleep(0.5)
+            pygame.time.wait(500)
+            #sleep(0.5)
 
         else:
             self.stats.game_active = False
             pygame.mouse.set_visible(True)
 
+    def draw_start_screen(self):
+        """Draws the start screen."""
+        self.screen.fill(self.ai_settings.bg_color)
+        self.score_button.prep_msg("High Scores")
+        alien_a = self.sprite_sheet.get_sprite(162, 0, 31, 31)
+        alien_a_rect = alien_a.get_rect()
+        alien_a_rect.center = self.screen.get_rect().center
+        alien_a_rect.y -= 150
+        alien_a_rect.x -= 50
+        alien_b = self.sprite_sheet.get_sprite(0, 84, 43, 31)
+        alien_b_rect = alien_b.get_rect()
+        alien_b_rect.center = self.screen.get_rect().center
+        alien_b_rect.y -= 80
+        alien_b_rect.x -= 50
+        alien_c = self.sprite_sheet.get_sprite(88, 84, 46, 31)
+        alien_c_rect = alien_c.get_rect()
+        alien_c_rect.center = self.screen.get_rect().center
+        alien_c_rect.y -= 10
+        alien_c_rect.x -= 50
+        ufo = self.sprite_sheet.get_sprite(120, 0, 41, 18)
+        ufo_rect = ufo.get_rect()
+        ufo_rect.center = self.screen.get_rect().center
+        ufo_rect.y += 60
+        ufo_rect.x -= 50
+        self.screen.blit(alien_a, alien_a_rect)
+        self.screen.blit(alien_b, alien_b_rect)
+        self.screen.blit(alien_c, alien_c_rect)
+        self.screen.blit(ufo, ufo_rect)
+
+
     def update_screen(self):
         """Update images on the screen and flip to the new screen."""
         # Redraw the screen during each pass through the loop.
-        self.screen.fill(self.ai_settings.bg_color)
-        self.ship.blitme()
-        self.aliens.draw(self.screen)
+        if self.stats.game_active:
+            self.screen.fill(self.ai_settings.bg_color)
+            self.ship.blitme()
+            self.aliens.draw(self.screen)
+            self.ufos.draw(self.screen)
 
-        # Redraw all bullets behind ship and aliens.
-        for bullet in self.bullets.sprites():
-            bullet.draw_bullet()
+            # Draw the barriers
+            for barrier in self.barriers:
+                barrier.draw_barrier()
 
-        # Draw the score information.
-        self.sb.show_score()
+            # Redraw all bullets behind ship and aliens.
+            for bullet in self.bullets.sprites():
+                bullet.draw_bullet()
+            for bullet in self.alien_bullets.sprites():
+                bullet.blitme()
+            # Draw the score information.
+            self.sb.show_score()
 
-        # Draw the play button if the game is inactive.
-        if not self.stats.game_active:
+            # Create ufos at random intervals
+            if self.spawn_ufo >= random.randint(4000, 11000):
+                self.create_ufos()
+                self.spawn_ufo = 0
+            else:
+                self.spawn_ufo += 1
+        else:
+            if self.displaying_scores:
+                self.screen.fill((180, 180, 180))
+                self.score_button.prep_msg("Return")
+            else:
+                self.draw_start_screen()
+            font_red = (255, 0, 0)
+            font_green = (0, 255, 0)
+            font = pygame.font.SysFont(None, 100)
+            logo_img_top = font.render("Space", True, font_red)
+            logo_top_rect = pygame.Rect(0, 0, 200, 50)
+            logo_top_rect.center = self.screen.get_rect().center
+            logo_top_rect.y -= 360
+            logo_top_rect.x += 30
+            logo_img_bot = font.render("Invaders", True, font_green)
+            logo_bot_rect = pygame.Rect(0, 0, 200, 50)
+            logo_bot_rect.center = self.screen.get_rect().center
+            logo_bot_rect.y -= 260
+            self.screen.blit(logo_img_top, logo_top_rect)
+            self.screen.blit(logo_img_bot, logo_bot_rect)
+            # Draw the play button and high score button if the game is inactive.
             self.play_button.draw_button()
+            self.score_button.draw_button()
 
         # Make the most recently drawn screen visible.
         pygame.display.flip()
@@ -187,18 +315,46 @@ class GameManager:
             self.animate_aliens = 0
         self.animate_aliens += 1
         self.aliens.update()
+
         # Look for alien-ship collisions.
         if pygame.sprite.spritecollideany(self.ship, self.aliens):
             self.ship_hit()
 
+        # Shoot bullets from aliens
+        #print("check time: " + str(self.alien_bullet_time))
+        if self.alien_bullet_time >= random.randint(500, 1000):
+            # print('call shoot method')
+            alien_list = self.aliens.sprites()
+            alien_firing = len(alien_list) - 11
+            alien_firing
+            if alien_firing < 0:
+                alien_firing = 0
+            if len(alien_list) > 0:
+                self.alien_shoot(alien_list[random.randint(alien_firing, len(alien_list) - 1)])
+            self.alien_bullet_time = 0
+        self.alien_bullet_time += 1
         # Look for aliens hitting the bottom of the screen.
         self.check_aliens_bottom()
+
+    def alien_shoot(self, alien):
+        """Create a bullet from an alien."""
+        new_bullet = AlienBullet(screen=self.screen, sprite_sheet=self.sprite_sheet, x=alien.rect.x,
+                                 y=alien.rect.y, version=random.randint(0, 1))
+        self.alien_bullets.add(new_bullet)
 
     def check_high_score(self):
         """Check to see if there's a new high score."""
         if self.stats.score > self.stats.high_score:
             self.stats.high_score = self.stats.score
             self.sb.prep_high_score()
+
+    def create_barriers(self):
+        self.barriers = []
+        for i in range(0, 4):
+            barrier = Barrier(screen=self.screen, sprite_sheet=self.sprite_sheet, column=i)
+            barrier.create_barrier()
+            barrier.draw_barrier()
+            self.barriers.append(barrier)
 
 
     '''Might remove everything under into fleet class'''
@@ -218,10 +374,7 @@ class GameManager:
         alien_width = 50
         alien.x = alien_width + 2 * alien_width * alien_number
         alien.rect.x = alien.x
-        if row == 4:
-            alien.rect.y = alien.rect.height + 10000 * alien.rect.height * row_number
-        else:
-            alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
+        alien.rect.y = 100 + alien.rect.height + 2 * alien.rect.height * row_number
         self.aliens.add(alien)
 
     def check_aliens_bottom(self):
@@ -245,3 +398,22 @@ class GameManager:
         for alien in self.aliens.sprites():
             alien.rect.y += self.ai_settings.fleet_drop_speed
         self.ai_settings.fleet_direction *= -1
+
+    def create_ufos(self):
+        """Create ufos at a random interval."""
+        if len(self.ufos) < 1:
+            ufo = Ufo(ai_settings=self.ai_settings, screen=self.screen, sprite_sheet=self.sprite_sheet)
+            ufo.rect.x = 50
+            ufo.rect.y = 50
+            self.ufos.add(ufo)
+
+    def update_ufos(self):
+        """Check if ufo is at the edge, de-spawn if it is."""
+        self.check_ufo_edges()
+        self.ufos.update()
+
+    def check_ufo_edges(self):
+        """Check if ufo reached the edge of the screen."""
+        for ufo in self.ufos.sprites():
+            if ufo.check_edges():
+                self.spawn_ufo = 0

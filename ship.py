@@ -1,4 +1,5 @@
 from pygame.sprite import Sprite
+from time import sleep
 
 
 class Ship(Sprite):
@@ -9,7 +10,17 @@ class Ship(Sprite):
         self.ai_settings = ai_settings
 
         # Load the ship image and get its rect.
-        self.image = sprite_sheet.get_sprite(0, 32, 43, 25)
+        self.image = sprite_sheet.get_sprite(88, 58, 43, 25)
+        self.death_image = []
+        self.death_image.append(sprite_sheet.get_sprite(44, 32, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(44, 58, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(0, 32, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(88, 32, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(132, 32, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(0, 58, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(176, 58, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(176, 32, 43, 25))
+        self.death_image.append(sprite_sheet.get_sprite(132, 58, 43, 25))
         self.rect = self.image.get_rect()
         self.screen_rect = screen.get_rect()
 
@@ -42,3 +53,11 @@ class Ship(Sprite):
     def center_ship(self):
         """Center the ship on the screen."""
         self.center = self.screen_rect.centerx
+
+    def destroy_animation(self):
+        """Play animation on death."""
+        image = self.image
+        for i in range(0, 9):
+            self.image = self.death_image[i]
+            self.blitme()
+        self.image = image

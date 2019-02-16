@@ -44,6 +44,12 @@ class Scoreboard():
         # Draw ships
         self.ships.draw(self.screen)
 
+#        test_img = self.sprite_sheet.get_sprite(184, 84, 49, 37)
+#        test_img_rect = test_img.get_rect()
+#        test_img_rect.right = self.screen_rect.right - 100
+#        test_img_rect.top = self.screen_rect.bottom - 100
+#        self.screen.blit(test_img, test_img_rect)
+
     def prep_high_score(self):
         """Turn the high score into a rendered image."""
         high_score = int(round(self.stats.high_score, -1))
@@ -70,6 +76,5 @@ class Scoreboard():
         for ship_number in range(self.stats.ships_left):
             ship = Ship(ai_settings=self.ai_settings, screen=self.screen, sprite_sheet=self.sprite_sheet)
             ship.rect.x = 10 + ship_number * ship.rect.width + ship_number * 5
-            print(ship_number)
             ship.rect.y = 10
             self.ships.add(ship)

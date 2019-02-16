@@ -37,7 +37,6 @@ class Settings:
 
         # Initailize dynamic settings
         self.fleet_direction =1
-        self.ufo_points = 50
         self.initialize_dynamic_settings()
 
     def initialize_dynamic_settings(self):
@@ -51,7 +50,6 @@ class Settings:
         self.fleet_direction = 1
 
         # UFO Scoring
-        self.ufo_points = 50
         self.score_scale = 1
 
     def increase_speed(self):
