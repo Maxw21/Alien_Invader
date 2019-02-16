@@ -10,6 +10,6 @@ class SpriteSheet(object):
     # Parameters are based on the sprite sheet dimensions.
     def get_sprite(self, x, y, width, height):
         """Split the sprite sheet into individual sprites."""
-        sprite = pygame.Surface([width, height])#.convert()
+        sprite = pygame.Surface([width, height])  # .convert()
         sprite.blit(self.spriteSheet, (0, 0), (x, y, width, height))
         return sprite

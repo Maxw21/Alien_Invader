@@ -205,24 +205,11 @@ class GameManager:
     def create_fleet(self):
         """Create a full fleet of aliens."""
         row = 4
-
         # Create the fleet of aliens.
         for row_number in range(self.ai_settings.number_rows):
             for alien_number in range(self.ai_settings.number_aliens_x):
                 self.create_alien(alien_number, row_number, row)
             row -= 1
-
-    def get_number_aliens_x(self, alien_width):
-        """Determine the number of aliens that fit in a row."""
-        available_space_x = self.ai_settings.screen_width - 2 * alien_width
-        number_aliens_x = int(available_space_x / (2 * alien_width))
-        return number_aliens_x
-
-    def get_number_rows(self, ship_height, alien_height):
-        """Determine the number of rows of aliens that fit on the screen."""
-        available_space_y = (self.ai_settings.screen_height - (3 * alien_height) - ship_height)
-        number_rows = int(available_space_y / (2 * alien_height))
-        return number_rows
 
     def create_alien(self, alien_number, row_number, row):
         """Create an alien and place it in the row."""
@@ -231,7 +218,10 @@ class GameManager:
         alien_width = 50
         alien.x = alien_width + 2 * alien_width * alien_number
         alien.rect.x = alien.x
-        alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
+        if row == 4:
+            alien.rect.y = alien.rect.height + 10000 * alien.rect.height * row_number
+        else:
+            alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
         self.aliens.add(alien)
 
     def check_aliens_bottom(self):

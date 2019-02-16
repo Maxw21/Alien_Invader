@@ -15,13 +15,13 @@ class Settings:
 
         # Bullet settings
         self.bullet_speed_factor = 3
-        self.bullet_width = 2000
+        self.bullet_width = 3
         self.bullet_height = 15
         self.bullet_color = 255, 255, 255
         self.bullets_allowed = 3
 
         # Alien settings
-        self.animate_aliens = 300
+        self.animate_aliens = 350
         self.number_aliens_x = 11
         self.number_rows = 5
         self.alien_speed_factor = 1
