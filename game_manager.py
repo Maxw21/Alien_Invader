@@ -15,7 +15,7 @@ class GameManager:
     """Manages all game objects and interactions between them."""
     # Initialize Game Manager with all game objects.
     def __init__(self, ai_settings, screen, sprite_sheet, play_button, score_button,
-                 stats, sb, ship, bullets, aliens, ufos, barriers, alien_bullets):
+                 stats, sb, ship, bullets, aliens, ufos, barriers, alien_bullets, high_score_file):
         self.ai_settings = ai_settings
         self.screen = screen
         self.sprite_sheet = sprite_sheet
@@ -29,15 +29,24 @@ class GameManager:
         self.ufos = ufos
         self.barriers = barriers
         self.alien_bullets = alien_bullets
+        self.high_score_file = high_score_file
+        self.high_scores = []
         self.spawn_ufo = 0
         self.animate_aliens = 0
         self.alien_bullet_time = 0
         self.displaying_scores = False
+        for line in high_score_file:
+            self.high_scores.append(int(line))
+        self.high_score_file.close()
+        if len(self.high_scores) > 0:
+            self.stats.high_score = self.high_scores[0]
+            self.sb.prep_high_score()
 
     def check_events(self):
         """Respond to key presses and mouse events."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                self.save_high_scores()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 self.check_key_down_events(event)
@@ -57,6 +66,7 @@ class GameManager:
         elif event.key == pygame.K_SPACE:
             self.fire_bullet()
         elif event.key == pygame.K_q:
+            self.save_high_scores()
             sys.exit()
 
     def check_key_up_events(self, event):
@@ -215,10 +225,11 @@ class GameManager:
             self.ship.center_ship()
 
             # Pause
-            pygame.time.wait(500)
+            #pygame.time.wait(500)
             #sleep(0.5)
 
         else:
+            self.save_high_scores()
             self.stats.game_active = False
             pygame.mouse.set_visible(True)
 
@@ -226,31 +237,115 @@ class GameManager:
         """Draws the start screen."""
         self.screen.fill(self.ai_settings.bg_color)
         self.score_button.prep_msg("High Scores")
+        font_color = (230, 230, 230)
+        font = pygame.font.SysFont(None, 50)
         alien_a = self.sprite_sheet.get_sprite(162, 0, 31, 31)
         alien_a_rect = alien_a.get_rect()
         alien_a_rect.center = self.screen.get_rect().center
         alien_a_rect.y -= 150
-        alien_a_rect.x -= 50
+        alien_a_rect.x -= 100
+        alien_a_points = font.render("=      40", True, font_color)
+        alien_a_points_rect = pygame.Rect(0, 0, 200, 50)
+        alien_a_points_rect.center = self.screen.get_rect().center
+        alien_a_points_rect.y -= 145
+        alien_a_points_rect.x += 80
         alien_b = self.sprite_sheet.get_sprite(0, 84, 43, 31)
         alien_b_rect = alien_b.get_rect()
         alien_b_rect.center = self.screen.get_rect().center
         alien_b_rect.y -= 80
-        alien_b_rect.x -= 50
+        alien_b_rect.x -= 100
+        alien_b_points = font.render("=      20", True, font_color)
+        alien_b_points_rect = pygame.Rect(0, 0, 200, 50)
+        alien_b_points_rect.center = self.screen.get_rect().center
+        alien_b_points_rect.y -= 75
+        alien_b_points_rect.x += 80
         alien_c = self.sprite_sheet.get_sprite(88, 84, 46, 31)
         alien_c_rect = alien_c.get_rect()
         alien_c_rect.center = self.screen.get_rect().center
         alien_c_rect.y -= 10
-        alien_c_rect.x -= 50
+        alien_c_rect.x -= 100
+        alien_c_points = font.render("=      10", True, font_color)
+        alien_c_points_rect = pygame.Rect(0, 0, 200, 50)
+        alien_c_points_rect.center = self.screen.get_rect().center
+        alien_c_points_rect.y -= 5
+        alien_c_points_rect.x += 80
         ufo = self.sprite_sheet.get_sprite(120, 0, 41, 18)
         ufo_rect = ufo.get_rect()
         ufo_rect.center = self.screen.get_rect().center
         ufo_rect.y += 60
-        ufo_rect.x -= 50
+        ufo_rect.x -= 100
+        ufo_points = font.render("=     ???", True, font_color)
+        ufo_points_rect = pygame.Rect(0, 0, 200, 50)
+        ufo_points_rect.center = self.screen.get_rect().center
+        ufo_points_rect.y += 65
+        ufo_points_rect.x += 80
         self.screen.blit(alien_a, alien_a_rect)
+        self.screen.blit(alien_a_points, alien_a_points_rect)
         self.screen.blit(alien_b, alien_b_rect)
+        self.screen.blit(alien_b_points, alien_b_points_rect)
         self.screen.blit(alien_c, alien_c_rect)
+        self.screen.blit(alien_c_points, alien_c_points_rect)
         self.screen.blit(ufo, ufo_rect)
+        self.screen.blit(ufo_points, ufo_points_rect)
 
+    def draw_title(self):
+        """Draw the space invader title"""
+        font_red = (255, 0, 0)
+        font_green = (0, 255, 0)
+        font = pygame.font.SysFont(None, 100)
+        logo_img_top = font.render("Space", True, font_red)
+        logo_top_rect = pygame.Rect(0, 0, 200, 50)
+        logo_top_rect.center = self.screen.get_rect().center
+        logo_top_rect.y -= 360
+        logo_top_rect.x -= 10
+        logo_img_bot = font.render("Invaders", True, font_green)
+        logo_bot_rect = pygame.Rect(0, 0, 200, 50)
+        logo_bot_rect.center = self.screen.get_rect().center
+        logo_bot_rect.y -= 260
+        logo_bot_rect.x -= 50
+        self.screen.blit(logo_img_top, logo_top_rect)
+        self.screen.blit(logo_img_bot, logo_bot_rect)
+
+    def draw_high_scores(self):
+        """Draw the high scores on the high score page"""
+        self.high_scores.sort(reverse=True)
+        self.screen.fill((180, 180, 180))
+        self.score_button.prep_msg("Return")
+        font_color_black = (0, 0, 0)
+        font_color_blue = (0, 0, 255)
+        font = pygame.font.SysFont(None, 50)
+        title_img = font.render("High Scores", True, font_color_blue)
+        title_img_rect = pygame.Rect(0, 0, 200, 50)
+        title_img_rect.center = self.screen.get_rect().center
+        title_img_rect.y -= 180
+        self.screen.blit(title_img, title_img_rect)
+        offset = -120
+        max_score = len(self.high_scores)
+        if max_score > 10:
+            max_score = 10
+        for i in range(0, max_score):
+            score_image = font.render(str(self.high_scores[i]), True, font_color_black)
+            score_image_rect = pygame.Rect(0, 0, 200, 50)
+            score_image_rect.center = self.screen.get_rect().center
+            score_image_rect.y += offset
+            score_image_rect.x += 20
+            self.screen.blit(score_image, score_image_rect)
+            offset += 40
+
+    def save_high_scores(self):
+        """Save the high scores before closing and in between games."""
+        self.high_scores.append(self.stats.score)
+        self.high_scores.sort(reverse=True)
+        if len(self.high_scores) > 0:
+            self.stats.high_score = self.high_scores[0]
+            self.sb.prep_high_score()
+        max_score = len(self.high_scores)
+        self.high_score_file = open("high_score_file.txt", "w")
+        if max_score > 10:
+            max_score = 10
+        for i in range(0, max_score):
+            self.high_score_file.write(str(self.high_scores[i]) + "\n")
+        self.high_score_file.close()
 
     def update_screen(self):
         """Update images on the screen and flip to the new screen."""
@@ -281,24 +376,10 @@ class GameManager:
                 self.spawn_ufo += 1
         else:
             if self.displaying_scores:
-                self.screen.fill((180, 180, 180))
-                self.score_button.prep_msg("Return")
+                self.draw_high_scores()
             else:
                 self.draw_start_screen()
-            font_red = (255, 0, 0)
-            font_green = (0, 255, 0)
-            font = pygame.font.SysFont(None, 100)
-            logo_img_top = font.render("Space", True, font_red)
-            logo_top_rect = pygame.Rect(0, 0, 200, 50)
-            logo_top_rect.center = self.screen.get_rect().center
-            logo_top_rect.y -= 360
-            logo_top_rect.x += 30
-            logo_img_bot = font.render("Invaders", True, font_green)
-            logo_bot_rect = pygame.Rect(0, 0, 200, 50)
-            logo_bot_rect.center = self.screen.get_rect().center
-            logo_bot_rect.y -= 260
-            self.screen.blit(logo_img_top, logo_top_rect)
-            self.screen.blit(logo_img_bot, logo_bot_rect)
+            self.draw_title()
             # Draw the play button and high score button if the game is inactive.
             self.play_button.draw_button()
             self.score_button.draw_button()

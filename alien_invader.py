@@ -27,6 +27,13 @@ def run_game():
     play_button = Button(screen=screen, msg="Play", order=0)
     score_button = Button(screen=screen, msg="High Scores", order=1)
 
+    # Open high score file
+    try:
+        high_score_file = open("high_score_file.txt", "r+")
+    except FileNotFoundError:
+        high_score_file = open("high_score_file.txt", "w+")
+
+
     # Create an instance to store game statistics and create a scoreboard.
     stats = GameStats(ai_settings=ai_settings)
     sb = Scoreboard(ai_settings=ai_settings, screen=screen, stats=stats, sprite_sheet=sprite_sheet)
@@ -44,7 +51,7 @@ def run_game():
                                sprite_sheet=sprite_sheet, play_button=play_button,
                                score_button=score_button, stats=stats, sb=sb, ship=ship,
                                bullets=bullets, aliens=aliens, ufos=ufos, barriers=barriers,
-                               alien_bullets=alien_bullets)
+                               alien_bullets=alien_bullets, high_score_file=high_score_file)
 
     game_manager.create_fleet()
 
