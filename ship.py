@@ -1,5 +1,4 @@
 from pygame.sprite import Sprite
-from time import sleep
 
 
 class Ship(Sprite):
@@ -21,6 +20,8 @@ class Ship(Sprite):
         self.death_image.append(sprite_sheet.get_sprite(176, 58, 43, 25))
         self.death_image.append(sprite_sheet.get_sprite(176, 32, 43, 25))
         self.death_image.append(sprite_sheet.get_sprite(132, 58, 43, 25))
+        self.death_image.append(self.image)
+        self.death_anim_counter = 0
         self.rect = self.image.get_rect()
         self.screen_rect = screen.get_rect()
 
@@ -56,8 +57,7 @@ class Ship(Sprite):
 
     def destroy_animation(self):
         """Play animation on death."""
-        image = self.image
-        for i in range(0, 9):
-            self.image = self.death_image[i]
-            self.blitme()
-        self.image = image
+        self.image = self.death_image[self.death_anim_counter]
+        self.death_anim_counter += 1
+        if self.death_anim_counter >= 10:
+            self.death_anim_counter = 0

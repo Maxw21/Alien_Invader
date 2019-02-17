@@ -7,6 +7,7 @@ import pygame
 from barrier import Barrier
 from bullet import Bullet
 from alien import Alien
+from explosion import Explosion
 from alien_bullet import AlienBullet
 from ufo import Ufo
 
@@ -15,7 +16,8 @@ class GameManager:
     """Manages all game objects and interactions between them."""
     # Initialize Game Manager with all game objects.
     def __init__(self, ai_settings, screen, sprite_sheet, play_button, score_button,
-                 stats, sb, ship, bullets, aliens, ufos, barriers, alien_bullets, high_score_file):
+                 stats, sb, ship, bullets, aliens, ufos, barriers, explosions,
+                 alien_bullets, high_score_file):
         self.ai_settings = ai_settings
         self.screen = screen
         self.sprite_sheet = sprite_sheet
@@ -28,13 +30,24 @@ class GameManager:
         self.aliens = aliens
         self.ufos = ufos
         self.barriers = barriers
+        self.explosions = explosions
         self.alien_bullets = alien_bullets
         self.high_score_file = high_score_file
         self.high_scores = []
         self.spawn_ufo = 0
+        self.ufo_points_img = None
+        self.ufo_points_img_rect = None
+        self.ufo_points_animate = 0
+        self.ufo_destroy = False
         self.animate_aliens = 0
         self.alien_bullet_time = 0
         self.displaying_scores = False
+        self.alien_bullet_sound = pygame.mixer.Sound('sounds/alien_bullet_sound.wav')
+        self.alien_destroy_sound = pygame.mixer.Sound('sounds/alien_destroy_sound.wav')
+        self.ship_bullet_sound = pygame.mixer.Sound('sounds/ship_bullet_sound.wav')
+        self.ship_destroy_sound = pygame.mixer.Sound('sounds/ship_destroy_sound.wav')
+        self.alien_destroy_sound = pygame.mixer.Sound('sounds/alien_destroy_sound.wav')
+        self.ufo_sound = pygame.mixer.Sound('sounds/ufo_sound.wav')
         for line in high_score_file:
             self.high_scores.append(int(line))
         self.high_score_file.close()
@@ -66,7 +79,8 @@ class GameManager:
         elif event.key == pygame.K_SPACE:
             self.fire_bullet()
         elif event.key == pygame.K_q:
-            self.save_high_scores()
+            if self.stats.game_active:
+                self.save_high_scores()
             sys.exit()
 
     def check_key_up_events(self, event):
@@ -107,6 +121,10 @@ class GameManager:
             self.create_barriers()
             self.ship.center_ship()
 
+            # Play the background Music
+            pygame.mixer.music.load('sounds/background_music.wav')
+            pygame.mixer.music.play(-1)
+
     def check_score_button(self, mouse_x, mouse_y):
         """Display high scores."""
         button_clicked = self.score_button.rect.collidepoint(mouse_x, mouse_y)
@@ -119,6 +137,7 @@ class GameManager:
         bullet_offset = 0
         # Create a new bullet and add it to the bullets group.
         if len(self.bullets) < self.ai_settings.bullets_allowed:
+            self.ship_bullet_sound.play()
             for _ in range(3):
                 new_bullet = Bullet(ai_settings=self.ai_settings, screen=self.screen,
                                     ship=self.ship, bullet_y=bullet_offset)
@@ -151,31 +170,26 @@ class GameManager:
         if collisions or ufo_collisions:
             for aliens in collisions.values():
                 for alien in aliens:
-
-
-
-                    # print(alien.rect)
-                    explosion_image = self.sprite_sheet.get_sprite(165, 122, 54, 50)
-                    explosion_image_rect = explosion_image.get_rect()
-                    explosion_image_rect.x = alien.rect.x
-                    explosion_image_rect.y = alien.rect.y
-                    # print(explosion_image_rect)
-                    self.screen.blit(explosion_image, explosion_image_rect)
+                    self.alien_destroy_sound.play()
+                    explosion = Explosion(screen=self.screen, sprite_sheet=self.sprite_sheet, rect=alien.rect)
+                    explosion.blitme()
+                    self.explosions.add(explosion)
                     self.stats.score += (alien.points * self.ai_settings.score_scale)
-
-
                 self.sb.prep_score()
             for ufos in ufo_collisions.values():
                 for ufo in ufos:
-                    ufo_points = random.randint(10, 100)
-                    points_str = "{:,}".format(ufo_points)
+                    self.ufo_sound.stop()
+                    self.alien_destroy_sound.play()
+                    ufo_points = random.randrange(40, 200, 10)
+                    points_str = "+ {:,}".format(ufo_points)
                     text_color = (230, 230, 230)
                     font = pygame.font.SysFont(None, 30)
-                    points_img = font.render(points_str, True, text_color, self.ai_settings.bg_color)
-                    points_img_rect = points_img.get_rect()
-                    points_img_rect.x = ufo.rect.x
-                    points_img_rect.y = ufo.rect.y
-                    self.screen.blit(points_img, points_img_rect)
+                    self.ufo_points_img = font.render(points_str, True, text_color, self.ai_settings.bg_color)
+                    self.ufo_points_img_rect = self.ufo_points_img.get_rect()
+                    self.ufo_points_img_rect.x = ufo.rect.x
+                    self.ufo_points_img_rect.y = ufo.rect.y
+                    self.screen.blit(self.ufo_points_img, self.ufo_points_img_rect)
+                    self.ufo_destroy = True
                 self.stats.score += ufo_points
                 self.sb.prep_score()
             self.check_high_score()
@@ -194,7 +208,7 @@ class GameManager:
 
     def check_bullet_ship_collisions(self):
         """Respond to bullet-ship collisions."""
-        collisions = pygame.sprite.spritecollide(self.ship,self.alien_bullets, True)
+        collisions = pygame.sprite.spritecollide(self.ship, self.alien_bullets, True)
         if collisions:
             self.ship_hit()
 
@@ -217,8 +231,8 @@ class GameManager:
             self.aliens.empty()
             self.bullets.empty()
 
-            # Play ship destroy animation
-            self.ship.destroy_animation()
+            # Play ship destroy sound
+            self.ship_destroy_sound.play()
 
             # Create a new fleet and center the ship.
             self.create_fleet()
@@ -226,9 +240,15 @@ class GameManager:
 
             # Pause
             #pygame.time.wait(500)
+            for i in range(0, 10):
+                self.ship.destroy_animation()
+                self.update_screen()
+                sleep(0.2)
             #sleep(0.5)
 
         else:
+            pygame.mixer.music.stop()
+            self.ufo_sound.stop()
             self.save_high_scores()
             self.stats.game_active = False
             pygame.mouse.set_visible(True)
@@ -355,6 +375,23 @@ class GameManager:
             self.ship.blitme()
             self.aliens.draw(self.screen)
             self.ufos.draw(self.screen)
+            self.explosions.draw(self.screen)
+
+            # Animate explosions
+            if len(self.explosions) > 0:
+                explosion_list = self.explosions.sprites()
+                for explosion in explosion_list:
+                    explosion.update_timer()
+                    if explosion.animation_timer == 25:
+                        explosion.animation_switch()
+
+            # Display UFO points
+            if self.ufo_destroy:
+                self.screen.blit(self.ufo_points_img, self.ufo_points_img_rect)
+                self.ufo_points_animate += 1
+                if self.ufo_points_animate >= 100:
+                    self.ufo_destroy = False
+                    self.ufo_points_animate = 0
 
             # Draw the barriers
             for barrier in self.barriers:
@@ -419,6 +456,7 @@ class GameManager:
 
     def alien_shoot(self, alien):
         """Create a bullet from an alien."""
+        self.alien_bullet_sound.play()
         new_bullet = AlienBullet(screen=self.screen, sprite_sheet=self.sprite_sheet, x=alien.rect.x,
                                  y=alien.rect.y, version=random.randint(0, 1))
         self.alien_bullets.add(new_bullet)
@@ -483,13 +521,14 @@ class GameManager:
     def create_ufos(self):
         """Create ufos at a random interval."""
         if len(self.ufos) < 1:
+            self.ufo_sound.play(-1)
             ufo = Ufo(ai_settings=self.ai_settings, screen=self.screen, sprite_sheet=self.sprite_sheet)
             ufo.rect.x = 50
-            ufo.rect.y = 50
+            ufo.rect.y = 60
             self.ufos.add(ufo)
 
     def update_ufos(self):
-        """Check if ufo is at the edge, de-spawn if it is."""
+        """Check if ufo is at the edge, de-spawn ufo if it is."""
         self.check_ufo_edges()
         self.ufos.update()
 
@@ -497,4 +536,5 @@ class GameManager:
         """Check if ufo reached the edge of the screen."""
         for ufo in self.ufos.sprites():
             if ufo.check_edges():
+                self.ufo_sound.stop()
                 self.spawn_ufo = 0

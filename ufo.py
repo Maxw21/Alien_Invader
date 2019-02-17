@@ -38,16 +38,3 @@ class Ufo(Sprite):
             return True
         return False
 
-
-
-
-    def display_points(self, ufo_points):
-        """Displays the points the ufo is worth."""
-        points_str = "{:,}".format(ufo_points)
-        text_color = (230, 230, 230)
-        font = pygame.font.SysFont(None, 20)
-        points_img = font.render(points_str, True, text_color, self.ai_settings.bg_color)
-        points_img_rect = points_img.get_rect()
-        points_img_rect.x = self.rect.x
-        points_img_rect.y = self.rect.y
-        self.screen.blit

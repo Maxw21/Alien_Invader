@@ -13,6 +13,8 @@ from game_manager import GameManager
 
 def run_game():
     # Initialize pygame, settings, and screen object.
+    pygame.mixer.pre_init(44100, -16, 2, 2048)
+    pygame.mixer.init()
     pygame.init()
     clock = pygame.time.Clock()
     clock.tick(60)
@@ -40,18 +42,19 @@ def run_game():
 
     # Make a ship, a group of bullets, a group of aliens, and a group of ufos.
     ship = Ship(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet)
-    barriers = []
     bullets = Group()
     alien_bullets = Group()
     aliens = Group()
     ufos = Group()
+    barriers = []
+    explosions = Group()
 
     # Create the fleet of aliens.
-    game_manager = GameManager(ai_settings=ai_settings, screen=screen,
-                               sprite_sheet=sprite_sheet, play_button=play_button,
-                               score_button=score_button, stats=stats, sb=sb, ship=ship,
-                               bullets=bullets, aliens=aliens, ufos=ufos, barriers=barriers,
-                               alien_bullets=alien_bullets, high_score_file=high_score_file)
+    game_manager = GameManager(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet,
+                               play_button=play_button, score_button=score_button, stats=stats,
+                               sb=sb, ship=ship, bullets=bullets, aliens=aliens, ufos=ufos,
+                               barriers=barriers, explosions=explosions, alien_bullets=alien_bullets,
+                               high_score_file=high_score_file)
 
     game_manager.create_fleet()
 
