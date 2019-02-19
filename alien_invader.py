@@ -7,8 +7,11 @@ from sprite_sheet import SpriteSheet
 from scoreboard import Scoreboard
 from button import Button
 from ship import Ship
-
-from game_manager import GameManager
+from fleet import Fleet
+from event_handler import EventHandler
+from display import Display
+from sounds import Sounds
+from bullets import Bullets
 
 
 def run_game():
@@ -25,7 +28,7 @@ def run_game():
     # Import sprite sheet
     sprite_sheet = SpriteSheet(file_name='images/spritesheet.png')
 
-    # Make the Play button.
+    # Make the Play and Scores button.
     play_button = Button(screen=screen, msg="Play", order=0)
     score_button = Button(screen=screen, msg="High Scores", order=1)
 
@@ -35,40 +38,42 @@ def run_game():
     except FileNotFoundError:
         high_score_file = open("high_score_file.txt", "w+")
 
+    # Make sound manager
+    sounds = Sounds()
 
     # Create an instance to store game statistics and create a scoreboard.
     stats = GameStats(ai_settings=ai_settings)
-    sb = Scoreboard(ai_settings=ai_settings, screen=screen, stats=stats, sprite_sheet=sprite_sheet)
+    sb = Scoreboard(ai_settings=ai_settings, screen=screen, stats=stats,
+                    sprite_sheet=sprite_sheet, high_score_file=high_score_file)
 
-    # Make a ship, a group of bullets, a group of aliens, and a group of ufos.
-    ship = Ship(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet)
-    bullets = Group()
-    alien_bullets = Group()
-    aliens = Group()
-    ufos = Group()
-    barriers = []
+    # Make the game objects.
+    ship = Ship(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet, stats=stats, sb=sb, sounds=sounds)
     explosions = Group()
+    barriers = []
+    fleet = Fleet(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet, sounds=sounds)
+    bullets = Bullets(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet, stats=stats, sb=sb,
+                      ship=ship, fleet=fleet, barriers=barriers, explosions=explosions, sounds=sounds)
 
-    # Create the fleet of aliens.
-    game_manager = GameManager(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet,
-                               play_button=play_button, score_button=score_button, stats=stats,
-                               sb=sb, ship=ship, bullets=bullets, aliens=aliens, ufos=ufos,
-                               barriers=barriers, explosions=explosions, alien_bullets=alien_bullets,
-                               high_score_file=high_score_file)
+    # Make the event handler
+    event_handler = EventHandler(ai_settings=ai_settings, play_button=play_button, score_button=score_button,
+                                 stats=stats, sb=sb, ship=ship, bullets=bullets, fleet=fleet, sounds=sounds)
 
-    game_manager.create_fleet()
+    # Make the display manager
+    display = Display(ai_settings=ai_settings, screen=screen, sprite_sheet=sprite_sheet, play_button=play_button,
+                      score_button=score_button, stats=stats, sb=sb, ship=ship, bullets=bullets, fleet=fleet,
+                      barriers=barriers, explosions=explosions, event_handler=event_handler)
 
     # Start the main loop for the game.
     while True:
-        game_manager.check_events()
+        event_handler.check_events(display=display)
 
         if stats.game_active:
             ship.update()
-            game_manager.update_bullets()
-            game_manager.update_aliens()
-            game_manager.update_ufos()
+            bullets.update_bullets(display=display)
+            fleet.update_aliens(ship=ship, display=display, bullets=bullets)
+            fleet.update_ufos()
 
-        game_manager.update_screen()
+        display.update_screen()
 
 
 run_game()

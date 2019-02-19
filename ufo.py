@@ -1,5 +1,4 @@
 from pygame.sprite import Sprite
-import pygame
 
 
 class Ufo(Sprite):
@@ -37,4 +36,3 @@ class Ufo(Sprite):
             self.kill()
             return True
         return False
-

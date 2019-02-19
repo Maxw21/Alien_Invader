@@ -4,16 +4,25 @@ from pygame.sprite import Group
 from ship import Ship
 
 
-class Scoreboard():
+class Scoreboard:
     """A class to report scoring information."""
 
-    def __init__(self, ai_settings, screen, stats, sprite_sheet):
+    def __init__(self, ai_settings, screen, stats, sprite_sheet, high_score_file):
         """Initialize score keeping attributes."""
         self.screen = screen
         self.sprite_sheet = sprite_sheet
         self.screen_rect = screen.get_rect()
         self.ai_settings = ai_settings
         self.stats = stats
+        self.high_score_file = high_score_file
+        self.high_scores = []
+        self.score_image = None
+        self.score_rect = None
+        self.high_score_image = None
+        self.high_score_rect = None
+        self.level_image = None
+        self.level_rect = None
+        self.ships = None
 
         # Font settings for scoring information.
         self.text_color = (230, 230, 230)
@@ -24,6 +33,7 @@ class Scoreboard():
         self.prep_high_score()
         self.prep_level()
         self.prep_ships()
+        self.load_high_scores()
 
     def prep_score(self):
         """Turn the score into a rendered image."""
@@ -43,12 +53,6 @@ class Scoreboard():
         self.screen.blit(self.level_image, self.level_rect)
         # Draw ships
         self.ships.draw(self.screen)
-
-#        test_img = self.sprite_sheet.get_sprite(184, 84, 49, 37)
-#        test_img_rect = test_img.get_rect()
-#        test_img_rect.right = self.screen_rect.right - 100
-#        test_img_rect.top = self.screen_rect.bottom - 100
-#        self.screen.blit(test_img, test_img_rect)
 
     def prep_high_score(self):
         """Turn the high score into a rendered image."""
@@ -78,3 +82,34 @@ class Scoreboard():
             ship.rect.x = 10 + ship_number * ship.rect.width + ship_number * 5
             ship.rect.y = 10
             self.ships.add(ship)
+
+    def load_high_scores(self):
+        """Load the high scores from disk."""
+        for line in self.high_score_file:
+            self.high_scores.append(int(line))
+        self.high_score_file.close()
+        if len(self.high_scores) > 0:
+            self.stats.high_score = self.high_scores[0]
+            self.prep_high_score()
+
+    def save_high_scores(self):
+        """Save the high scores before closing and in between games."""
+        self.high_scores.append(self.stats.score)
+        self.high_scores.sort(reverse=True)
+        if len(self.high_scores) > 0:
+            self.stats.high_score = self.high_scores[0]
+            self.prep_high_score()
+        max_score = len(self.high_scores)
+        self.high_score_file = open("high_score_file.txt", "w")
+        if max_score > 10:
+            max_score = 10
+        for i in range(0, max_score):
+            if self.high_scores[i] > 0:
+                self.high_score_file.write(str(int(self.high_scores[i])) + "\n")
+        self.high_score_file.close()
+
+    def check_high_score(self):
+        """Check to see if there's a new high score."""
+        if self.stats.score > self.stats.high_score:
+            self.stats.high_score = self.stats.score
+            self.prep_high_score()

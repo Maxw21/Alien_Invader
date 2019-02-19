@@ -7,6 +7,8 @@ class Button:
         """Initialize button attributes."""
         self.screen = screen
         self.screen_rect = screen.get_rect()
+        self.msg_image = None
+        self.msg_image_rect = None
 
         # Set the dimensions and properties of the button.
         self.width, self.height = 200, 50

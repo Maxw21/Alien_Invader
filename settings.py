@@ -36,7 +36,7 @@ class Settings:
         self.score_scale = 1
 
         # Initailize dynamic settings
-        self.fleet_direction =1
+        self.fleet_direction = 1
         self.initialize_dynamic_settings()
 
     def initialize_dynamic_settings(self):
